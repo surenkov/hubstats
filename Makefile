@@ -18,10 +18,11 @@ install-deps:
 .PHONY: build
 build: activate
 build:
+	@mkdir ./build/
 	python3 -m zipapp ./lib -p "/usr/bin/env python3" -o ./build/hubstats
 	chmod +x ./build/hubstats
 
 .PHONY: clean
 clean:
 	find ./lib/vendor -not -name '.gitkeep' -delete
-	find ./build -type f -not -name '.gitkeep' -delete
+	rm -rf ./build/
