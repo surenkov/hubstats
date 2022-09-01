@@ -1,6 +1,6 @@
 .PHONY: all
 all: install-deps
-all: build-zipapp
+all: build
 
 
 .PHONY: activate
@@ -11,11 +11,17 @@ activate:
 .PHONY: install-deps
 install-deps: activate
 install-deps:
-	python3 -m pip install -r requirements.txt --target ./vendor/
+	- python3 -m pip install -r requirements.txt --target ./lib/vendor/
+	@find ./lib/vendor -name '*.dist-info' -delete
 
 
-.PHONY: build-zipapp
-build-app: activate
-build-zipapp:
-	python3 -m zipapp -p "/usr/bin/env python3" -m "hubstats:main" -o ./build/hubstats
+.PHONY: build
+build: activate
+build:
+	python3 -m zipapp ./lib -p "/usr/bin/env python3" -o ./build/hubstats
 	chmod +x ./build/hubstats
+
+.PHONY: clean
+clean:
+	find ./lib/vendor -not -name '.gitkeep' -delete
+	find ./build -type f -not -name '.gitkeep' -delete

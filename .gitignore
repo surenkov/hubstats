@@ -8,5 +8,5 @@ tmp/
 .env/
 build/
 htmlcov
-vendor/*
-!vendor/.gitkeep
+lib/vendor/*
+!lib/vendor/.gitkeep

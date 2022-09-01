@@ -7,10 +7,10 @@ from pathlib import Path
 from datetime import date, timedelta
 
 parent_dir = os.path.abspath(os.path.dirname(__file__))
-vendor_dir = os.path.join(parent_dir, "../", "vendor")
+vendor_dir = os.path.join(parent_dir, "vendor")
 sys.path.append(vendor_dir)
 
-from . import hubstaff_client, statstable
+from hubstats import hubstaff_client, statstable
 
 
 argparser = argparse.ArgumentParser(
@@ -43,7 +43,9 @@ argparser.add_argument(
 )
 
 
-def main(args):
+def main():
+    args = argparser.parse_args()
+
     with make_http_client(args.config_path) as client:
         results = fetch_activities(client, args.date)
 
@@ -74,4 +76,4 @@ def fetch_activities(client: hubstaff_client.HubstaffClient, exact_date: date):
 
 
 if __name__ == "__main__":
-    main(argparser.parse_args())
+    main()
