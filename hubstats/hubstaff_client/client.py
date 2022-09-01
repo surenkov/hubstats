@@ -4,16 +4,16 @@ import weakref
 from datetime import date
 from vendor import httpx
 
-from . import models, exceptions
+from . import models, exceptions, auth
 
 
 class HubstaffClient(t.ContextManager["HubstaffClient"]):
     base_url: t.ClassVar[str] = "https://api.hubstaff.com"
     activities: "HubstaffActivities"
 
-    def __init__(self, organization_id: str, auth: httpx.Auth = None):
+    def __init__(self, organization_id: str, token_mgr: auth.AbcTokenManager):
         self.organization_id = organization_id
-        self.auth = auth
+        self.auth = auth.HubstaffAuth(token_mgr)
 
     def __enter__(self):
         self.client = httpx.Client(auth=self.auth, base_url=self.base_url)
@@ -32,6 +32,12 @@ class HubstaffNamespace:
     def __init__(self, owner: HubstaffClient):
         self.owner = weakref.proxy(owner)
 
+    def get_next_page(self, response_data: t.Dict[str, t.Any]) -> t.Optional[int]:
+        try:
+            return response_data["pagination"]["next_page_start_id"]
+        except KeyError:
+            return None
+
 
 class HubstaffActivities(HubstaffNamespace):
     ExtraRecords = t.Union[
@@ -43,19 +49,30 @@ class HubstaffActivities(HubstaffNamespace):
 
     def daily_activities(
         self,
-        start_date: date,
-        stop_date: date,
+        start: date,
+        stop: date,
         include: t.Collection[ExtraRecords] = (),
+        _offset: int = None,
     ) -> models.DailyActivitiesResponse:
-        params = {
-            "date[start]": start_date.isoformat(),
-            "date[stop]": stop_date.isoformat(),
-            "include": ",".join(include),
+        params: t.Dict[str, t.Any] = {
+            "date[start]": start.isoformat(),
+            "date[stop]": stop.isoformat(),
+            "include": ",".join(set(include)),
         }
+        if _offset is not None:
+            params["page_start_id"] = _offset
 
         url = self.daily_activities_path.format(org_id=self.owner.organization_id)
         resp = self.owner.client.get(url, params=params)
         if resp.is_error:
             raise exceptions.response_error(resp)
 
-        return models.DailyActivitiesResponse.parse_obj(resp.json())
+        data = resp.json()
+        activities = models.DailyActivitiesResponse.parse_obj(data)
+
+        next_page = self.get_next_page(data)
+        if next_page is not None:
+            next_activities = self.daily_activities(start, stop, include, next_page)
+            activities.extend(next_activities)
+
+        return activities

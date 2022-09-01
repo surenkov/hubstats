@@ -1,9 +1,25 @@
 import typing as t
-
 from datetime import date, datetime
-from zoneinfo import ZoneInfo
 
 from vendor import pydantic
+
+__all__ = (
+    "DailyActivity",
+    "User",
+    "Project",
+    "DailyActivitiesResponse",
+)
+
+class ResponseEntity(pydantic.BaseModel):
+    id: int
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.id == other.id
+        return NotImplemented
+
+    def __hash__(self):
+        return hash(self.id)
 
 
 class NullDefaultModel(pydantic.BaseModel):
@@ -14,8 +30,7 @@ class NullDefaultModel(pydantic.BaseModel):
         return value
 
 
-class DailyActivity(NullDefaultModel):
-    id: int
+class DailyActivity(ResponseEntity, NullDefaultModel):
     activity_date: t.Optional[date] = pydantic.Field(default=None, alias="date")
     user_id: t.Optional[int] = None
     project_id: t.Optional[int] = None
@@ -33,8 +48,7 @@ class DailyActivity(NullDefaultModel):
     updated_at: datetime = pydantic.Field(default_factory=datetime.utcnow)
 
 
-class User(NullDefaultModel):
-    id: int
+class User(ResponseEntity, NullDefaultModel):
     name: str = ""
     email: str = ""
     timezone: str = pydantic.Field(default="UTC", alias="time_zone")
@@ -42,12 +56,8 @@ class User(NullDefaultModel):
     created_at: datetime = pydantic.Field(default_factory=datetime.utcnow)
     updated_at: datetime = pydantic.Field(default_factory=datetime.utcnow)
 
-    def tzinfo(self):
-        return ZoneInfo(self.timezone)
 
-
-class Project(NullDefaultModel):
-    id: int
+class Project(ResponseEntity, NullDefaultModel):
     name: str = ""
     status: str = "active"
     billable: bool = True
@@ -58,5 +68,10 @@ class Project(NullDefaultModel):
 
 class DailyActivitiesResponse(pydantic.BaseModel):
     daily_activities: t.List[DailyActivity]
-    users: t.Optional[t.List[User]] = None
-    projects: t.Optional[t.List[Project]] = None
+    users: t.Set[User] = pydantic.Field(default_factory=set)
+    projects: t.Set[Project] = pydantic.Field(default_factory=set)
+
+    def extend(self, other: "DailyActivitiesResponse"):
+        self.daily_activities.extend(other.daily_activities)
+        self.users.update(other.users)
+        self.projects.update(other.projects)
