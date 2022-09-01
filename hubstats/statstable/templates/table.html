@@ -1,0 +1,47 @@
+<!doctype html>
+<html class="no-js" lang="">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title>User Activity &mdash; {{ activity_date.isoformat() }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+</head>
+
+<body>
+    <section class="section">
+        <header class="container is-widescreen pb-5">
+            <h1 class="title is-4">User Activity per Project</h1>
+            <h2 class="subtitle is-6">As of {{ activity_date.strftime("%a, %d %B %Y") }}</h2>
+        </header>
+
+        <div class="container is-widescreen">
+            <div class="table-container">
+                <table class="table is-striped is-hoverable is-bordered is-fullwidth">
+                    <thead>
+                        <tr>
+                            <th width="250">Project Name</th>
+                            {% for user in users %}
+                            <th>{{ user.name }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for project in projects %}
+                        <tr>
+                            <th>{{ project.name }}</th>
+                            {% for user in users %}
+                                {% with activity=activity_map.get((user.id, project.id)) %}
+                                <td class="is-family-monospace">{{ activity.billable | fmt_timedelta("{h:02d}:{m:02d}:{s:02d}") }}</td>
+                                {% endwith %}
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</body>
+</html>
